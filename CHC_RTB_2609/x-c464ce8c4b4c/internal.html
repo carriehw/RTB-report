@@ -1,0 +1,1220 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHC RTB Campaign Dashboard · 香缇卡 朋友圈 RTB · 內部版 Internal</title>
+<meta name="description" content="Chantecaille 日上 RTB campaign — ROAS 對標 KPI、成效與投放日志。">
+<!-- Kept out of search results wherever this is hosted. `noindex` is the instruction not to
+     list the page; `noarchive`/`nosnippet` also stop a cached copy or an excerpt of the
+     figures appearing in results even while the crawler still remembers the URL. These carry
+     the client's actual spend and ROAS, so the page is shared by link and by link only.
+     This is a request a well-behaved crawler honours, not access control — it is the reason
+     the delivered link is unguessable rather than the reason it is safe. -->
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<meta name="googlebot" content="noindex,noarchive,nosnippet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Tokens read off the live product at mia.ambr.io — the running site is the
+     brand of record, so these are its computed custom properties verbatim, not
+     the v2.0 PDF's approximations. Three deliberate differences from that PDF:
+     Paper is #F6F3ED (cooler, less yellow), Pink is #F10D93 (the actual logo
+     magenta), and there is no serif anywhere — the site sets display, body and
+     UI all in Geist. */
+  --paper:#F6F3ED; --sand:#FFFFFF; --sunk:#EFEAE2;
+  --ink:#0C102D; --ink-soft:#4C4D5F; --ink-pale:#E7E8F2;
+  --pink:#F10D93; --pink-txt:#C20A76; --pink-pale:#FBE7F3;
+  --sky:#60BDF1; --sky-txt:#0F74AE; --sky-pale:#EDF6FB;
+  --deep:#3256DE; --lime:#D3FE66;
+  --line:rgba(12,16,45,.14); --line-soft:rgba(12,16,45,.10);
+  --fill:rgba(12,16,45,.07); --tint:rgba(50,86,222,.05);
+  /* Verdict scale. The brand has no green and no amber, so the traffic light is
+     built from the palette's own pairs: Deep Blue = on target, Ink Soft = half
+     way, Pink Text = miss. Measured on Paper: 5.38 / 7.48 / 5.27 — all AA. */
+  --good:#3256DE; --watch:#4C4D5F; --bad:#C20A76;
+  --s1:8px; --s2:16px; --s3:24px; --s4:32px; --s5:40px; --s6:56px;
+  /* Geist for everything, matching the site. Headings are the same family at a
+     larger size and a tighter track — the hierarchy is scale and weight, never a
+     change of voice. CJK falls through to PingFang / JhengHei exactly as the
+     site's own stack does, so 繁體 and latin sit on one baseline. */
+  --sans:Geist,"Geist Fallback",-apple-system,"PingFang TC","PingFang SC",
+    "Microsoft JhengHei","Microsoft YaHei",system-ui,sans-serif;
+  --display:var(--sans);
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  /* The site's --radius is 0: square corners throughout. A dashboard needs the
+     hairline to read as a drawn edge, so panels stay square and only the pill
+     chips keep their 999px — those are the one shape the site also rounds. */
+  --maxw:1180px; --r-s:0px; --r-m:0px;
+}
+*{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased}
+body{margin:0;color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;
+  text-wrap:pretty;
+  /* The 42px hairline grid from the EK build — a drafting-table ground that reads
+     as a working document rather than a slide. Two 1px lines at 4% ink; visible
+     as texture, never as a border. */
+  background:
+    linear-gradient(rgba(12,16,45,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(12,16,45,.04) 1px,transparent 1px),
+    var(--paper);
+  background-size:42px 42px}
+.shell{max-width:var(--maxw);margin:0 auto;padding:0 var(--s3) var(--s6)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+td,th,.m-v,.rval,.mx-cell strong,.verdict{font-variant-numeric:tabular-nums}
+a{color:var(--sky-txt)}
+:focus-visible{outline:2px solid var(--deep);outline-offset:2px}
+
+/* ---- topbar ----------------------------------------------------------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
+  min-height:64px;padding:var(--s2) var(--s3);border-bottom:1px solid var(--line);
+  background:rgba(246,243,237,.94);max-width:var(--maxw);margin:0 auto}
+.lockup{display:flex;align-items:center;gap:16px;font-family:var(--mono);font-size:13px;
+  letter-spacing:.06em;font-weight:600}
+/* The artwork, never re-set type. The mark is 3.7:1 and its unit is the cap height of
+   the M, so height is what to specify — 20px cap gives 74px of width, well over the
+   56px screen floor. Clear space is one cap height, which the 16px gap plus the
+   topbar's own 24px padding already exceed on both sides. */
+.wordmark{display:block;height:20px;width:auto;flex:none}
+.lockup .rule{width:28px;height:1px;background:var(--ink)}
+.lockup .ctx{font-weight:400;letter-spacing:.04em;color:var(--ink-soft)}
+.topbar .tag{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft)}
+
+/* ---- hero ------------------------------------------------------------- */
+.hero{display:grid;grid-template-columns:1.35fr 1fr;gap:0;margin-top:var(--s4);
+  border:1px solid var(--ink);border-radius:var(--r-m);background:var(--paper);
+  overflow:hidden}
+.hero-l{padding:var(--s4)}
+.hero-r{padding:var(--s4);border-left:1px solid var(--line);background:var(--sand)}
+.prep{margin-bottom:var(--s3)}
+.prep span{font-family:var(--mono);font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-soft)}
+.prep strong{font-size:18px;font-weight:600;letter-spacing:-.01em}
+.prep-mark{display:flex;align-items:center;column-gap:16px;flex-wrap:wrap;
+  margin-top:var(--s2)}
+/* The client wordmark is 990×53.6 — an 18.5:1 ribbon. Width is what sets its legibility,
+   not height: below about 280px the engraved capitals lose their thin strokes, so it gets
+   a floor as well as a ceiling and is never asked to shrink into a column. */
+.brandmark{display:block;width:clamp(240px,100%,340px);height:auto;color:var(--ink)}
+/* Chinese name alongside, not inside: the mark is a fixed latin asset and 香缇卡 has to
+   sit beside it as type. Overrides the mono .prep span label above it. */
+.prep .cn{font-family:var(--sans);font-size:16px;font-weight:500;letter-spacing:.12em;
+  text-transform:none;color:var(--ink-soft);white-space:nowrap}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--pink-txt)}
+/* Display type follows the site: same family as body, separated by scale, weight 600
+   and a negative track that tightens as the size grows (the site runs -4% at 72px). */
+h1{font-family:var(--display);font-size:34px;font-weight:600;letter-spacing:-.03em;
+  margin:var(--s1) 0 var(--s2);text-wrap:balance;line-height:1.15}
+.hero-copy{margin:0;max-width:52ch;color:var(--ink-soft)}
+.scope{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:var(--s3);
+  border:1px solid var(--line);border-radius:999px;background:var(--sand);
+  padding:9px 16px;font-family:var(--mono);font-size:11px;color:var(--ink-soft);width:fit-content}
+.scope strong{color:var(--ink);font-weight:600}
+.scope .sep{width:1px;height:12px;background:var(--line)}
+.hero-meta{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3) var(--s2)}
+.hero-meta div{min-width:0}
+.hero-meta span{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}
+.hero-meta strong{display:block;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.status{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(194,10,118,.4);
+  border-radius:999px;background:rgba(194,10,118,.07);padding:5px 12px 5px 9px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--pink-txt);font-weight:600}
+.status i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.status.ok{border-color:rgba(50,86,222,.4);background:rgba(50,86,222,.07);color:var(--deep)}
+
+/* ---- alert ------------------------------------------------------------ */
+.alert{display:flex;gap:var(--s2);margin-top:var(--s3);background:var(--sand);
+  border:1px solid var(--line);border-left:3px solid var(--pink);
+  border-radius:var(--r-m);padding:var(--s2) var(--s3)}
+/* The campaign recovered, so the callout is a finding, not an alarm. Deep Blue edge
+   instead of Pink — the colour has to track what the box actually says. */
+.alert.ok{border-left-color:var(--deep)}
+.alert.ok .ic{color:var(--deep)}
+.alert .ic{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.1em;
+  color:var(--pink-txt);white-space:nowrap}
+.alert strong{font-weight:600;color:var(--ink)}
+.alert h3{margin:0 0 6px;font-size:15px;font-weight:600}
+.alert p{margin:0;color:var(--ink-soft);max-width:82ch}
+
+/* ---- section headers -------------------------------------------------- */
+section{margin-top:var(--s6)}
+.sec-h{display:flex;align-items:baseline;gap:var(--s2);flex-wrap:wrap;
+  border-bottom:1px solid var(--ink);padding-bottom:var(--s1);margin-bottom:var(--s3)}
+.sec-h .k{font-family:var(--mono);font-size:11px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--deep)}
+.sec-h h2{font-family:var(--display);font-size:28px;font-weight:600;margin:0;
+  letter-spacing:-.02em}
+.sec-h .note{margin-left:auto;font-size:12px;color:var(--ink-soft)}
+
+/* ---- KPI strip -------------------------------------------------------- */
+/* The EK grid: one bordered block, cells divided by 1px of ink showing through a
+   gap. Cheaper than six floating cards and it reads as one instrument. */
+/* `align-items:stretch` plus a 3-row subgrid in each cell is what makes the strip read as
+   one instrument. Without it each cell stacks independently, so a 2-line label in one and
+   a 1-line label in another push their figures to different heights — six figures on five
+   baselines, which is exactly what looked cluttered. */
+.m-grid{display:grid;grid-template-columns:1.6fr repeat(5,1fr);gap:1px;
+  border:1px solid var(--ink);border-radius:var(--r-m);background:var(--ink);overflow:hidden}
+/* label / figure / footnote. The label row is auto (its height is set by the tallest label
+   in the row and then shared), the figure row is auto, and the footnote row takes the slack
+   with 1fr so the cell bottoms stay flush no matter how long the note is. */
+.m-cell{background:var(--paper);padding:var(--s2);
+  display:grid;grid-template-rows:auto auto 1fr;row-gap:10px}
+/* 中文 is the label and carries Ink; the English gloss is the courtesy and carries
+   Ink Muted. Both clear AAA on Paper (16.82 and 7.48) — the hierarchy is built from
+   two legible weights, never by fading one of them toward the background. */
+.m-l{font-family:var(--mono);font-size:11px;letter-spacing:.04em;
+  color:var(--ink);line-height:1.35;font-weight:500}
+/* The English gloss on its own line: as a trailing run in the same sentence it wrapped
+   wherever it happened to fit, so no two labels broke at the same place. On its own line
+   the break is a decision, and every label is exactly two lines tall. */
+.m-l .en{display:block;color:var(--ink-soft);font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;font-weight:400}
+/* Baseline-aligned so the unit sits on the figure's baseline rather than its box —
+   `CHF` and `3,389` read as one quantity while remaining two elements that cannot
+   be split across lines by the wrap algorithm. */
+.m-f{display:flex;align-items:baseline;column-gap:8px;flex-wrap:nowrap}
+.m-v{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1;
+  letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+/* Units and the "/ KPI 1.0" qualifier are the same class of thing — a small mono
+   annotation on a figure — so they share one style instead of drifting apart. */
+.m-u{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.06em;
+  color:var(--ink-soft);white-space:nowrap}
+.m-s{align-self:end;font-size:11px;color:var(--ink-soft);line-height:1.45}
+/* One focal cell, and it wins by three levers at once: 2× the figure size, a wider
+   track, and the only Pink Accessible figure on the page. Everything else is one
+   tier. Promotion without demotion is not hierarchy. */
+.m-cell.focal{background:var(--sand);padding:var(--s3) var(--s2)}
+.m-cell.focal .m-v{font-size:52px;letter-spacing:-.03em}
+/* Verdict colour on the figure. 52px and 26px both clear the large-text threshold, so
+   Pink is safe at either size here; anything smaller would have to fall back to Ink. */
+.m-v.bad{color:var(--bad)} .m-v.watch{color:var(--watch)} .m-v.good{color:var(--good)}
+.m-cell.focal .m-u{font-size:15px}
+.m-cell.focal .m-s{font-size:12px;color:var(--ink)}
+
+/* ---- period pill ------------------------------------------------------ */
+.period{display:inline-flex;align-items:center;gap:10px;margin-top:var(--s2);
+  border:1px solid var(--line);border-radius:999px;background:var(--sand);padding:9px 16px}
+.period span{font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft)}
+.period strong{font-family:var(--mono);font-size:14px}
+/* The phase split sits outside the pill, not inside it: as a third pill segment it forced
+   the pill past the viewport at 390px, and an inline-flex pill has no wrap to fall back on.
+   As its own paragraph it wraps normally and reads as a qualifier on the period above. */
+.ph{margin:8px 0 0;font-size:12px;color:var(--ink-soft);max-width:76ch}
+
+/* ---- panels ----------------------------------------------------------- */
+.panel{border:1px solid var(--line);border-radius:var(--r-m);background:var(--sand);
+  padding:var(--s3);margin-top:var(--s3)}
+.panel:first-of-type{margin-top:0}
+.panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2);
+  flex-wrap:wrap;margin-bottom:var(--s2)}
+.panel-h h3{margin:0;font-size:16px;font-weight:600;letter-spacing:-.005em}
+.panel-h .src{font-family:var(--mono);font-size:11px;color:var(--ink-soft);
+  border:1px solid var(--line);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.cap{margin:0 0 var(--s2);font-size:12.5px;color:var(--ink-soft);max-width:82ch}
+/* A measurement caveat travels with the chart it limits, never in a footnote the client
+   scrolls past. Set apart by a rule and a smaller size so it reads as a limit on the
+   claim above, not as more of the claim. */
+.cav{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);
+  font-size:11.5px;line-height:1.65}
+
+/* ---- gauge ------------------------------------------------------------ */
+.gauge-panel{display:grid;grid-template-columns:1fr 300px;gap:var(--s4);align-items:center}
+.chart{display:block;width:100%;height:auto;overflow:visible}
+.gauge{margin-top:var(--s1)}
+.chart .gtrack{fill:var(--fill)}
+.chart .gfill.bad{fill:var(--bad)} .chart .gfill.watch{fill:var(--watch)}
+.chart .gfill.good{fill:var(--good)}
+.chart .gtick{stroke:rgba(12,16,45,.3);stroke-width:1;stroke-dasharray:3 3}
+.chart .gkpi{stroke:var(--deep);stroke-width:2}
+.chart .glab{font-size:10px;fill:var(--ink-soft);letter-spacing:.06em;
+  font-family:var(--mono)}
+.chart .glab.strong{fill:var(--deep);font-weight:600}
+.chart .glab.dim{fill:rgba(12,16,45,.45)}
+.chart .axis{stroke:var(--line);stroke-width:1}
+.chart .gkpi.dash{stroke-dasharray:4 3}
+/* Bar labels carry the same verdict colour as the bar, so the crossing on the last day
+   reads at a glance. 14px/600 mono clears the large-bold threshold for Pink. */
+.chart .bad-t{fill:var(--bad)} .chart .watch-t{fill:var(--watch)}
+.chart .good-t{fill:var(--good)}
+.ledger{margin:0;display:grid;row-gap:12px}
+.ledger div{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s2);
+  border-bottom:1px solid var(--line-soft);padding-bottom:8px}
+.ledger div:last-child{border-bottom:0}
+.ledger dt{font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-soft)}
+.ledger dd{margin:0;font-family:var(--mono);font-size:15px;font-weight:600;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.ledger .eq{display:block;font-size:10px;font-weight:500;color:var(--ink-soft);
+  letter-spacing:.06em;text-align:right;margin-top:2px}
+/* The gap is the one figure that has to land. Pink Accessible clears AA on Paper
+   at 6.89:1, so here the colour can carry the signal without a border crutch. */
+.ledger dd.miss{color:var(--bad)}
+
+/* ---- charts inside panels -------------------------------------------- */
+.chart .rlab{font-size:12.5px;fill:var(--ink)}
+.chart .rval{font-size:12px;fill:var(--ink);font-family:var(--mono)}
+.chart .rval.big{font-size:14px;font-weight:600}
+.chart .rval.soft{fill:var(--ink-soft)}
+.chart .rval.warn{fill:var(--bad);font-weight:600}
+.chart .track{fill:var(--fill)}
+.chart .bar{fill:var(--deep)}
+.chart .bar.leak{fill:var(--bad)}
+.chart .lt-good{fill:var(--good)} .chart .lt-watch{fill:var(--watch)}
+.chart .lt-bad{fill:var(--bad)}
+
+/* ---- trend as rows (narrow only) ------------------------------------- */
+.only-narrow{display:none}
+.tl{list-style:none;margin:0;padding:0;display:grid;row-gap:12px}
+.tl li{display:grid;grid-template-columns:44px minmax(0,1fr) 56px 68px;align-items:center;
+  column-gap:10px}
+.tl-d{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+.tl-bar{height:14px;border-radius:2px;background:var(--fill);overflow:hidden}
+.tl-bar i{display:block;height:100%;border-radius:2px}
+.tl-bar i.bad{background:var(--bad)} .tl-bar i.watch{background:var(--watch)}
+.tl-bar i.good{background:var(--good)}
+.tl-s{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);text-align:right}
+/* The KPI marker is a full-width rule, not a data row, so it opts out of the row grid
+   rather than inheriting a 44px first column that would wrap its label. */
+.tl li.tl-kpi{display:block;border-top:1px dashed rgba(50,86,222,.5);padding-top:6px}
+.tl-kpi span{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--deep);
+  font-weight:600}
+
+/* ---- verdict dot ------------------------------------------------------ */
+.verdict{display:inline-flex;align-items:center;column-gap:6px;font-family:var(--mono);
+  font-size:12.5px;font-weight:600;white-space:nowrap}
+.verdict i{width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:currentColor}
+.verdict em{font-style:normal;font-weight:500;font-size:11px;color:var(--ink-soft)}
+.verdict.good{color:var(--good)} .verdict.watch{color:var(--watch)}
+.verdict.bad{color:var(--bad)}
+
+/* ---- bid matrix ------------------------------------------------------- */
+.mx-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+.mx{border:1px solid var(--ink);border-radius:var(--r-m);background:var(--sand);
+  overflow:hidden}
+/* A 6px accent rule instead of a tinted card: the identity sits on the edge, the
+   data ground stays neutral, and two cards stay comparable at a glance. */
+.mx::before{content:"";display:block;height:6px;background:var(--mx-accent)}
+.mx-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s2);
+  padding:var(--s2) var(--s2) var(--s1)}
+.mx-l{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-soft)}
+.mx-head h3{margin:6px 0 0;font-family:var(--mono);font-size:19px;font-weight:600;
+  letter-spacing:-.01em}
+.mx-head .verdict{flex-direction:column;align-items:flex-end;row-gap:2px;column-gap:0}
+.mx-head .verdict i{display:none}
+.mx-cells{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;
+  margin-top:var(--s2);border-top:1px solid var(--ink);background:var(--line)}
+.mx-cell{background:var(--sand);padding:12px}
+.mx-cell span{display:block;min-height:24px;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+.mx-cell strong{display:block;font-family:var(--mono);font-size:15px;font-weight:600;
+  line-height:1.2;overflow-wrap:anywhere}
+
+/* ---- table ------------------------------------------------------------ */
+/* Seven columns and no min-width, so the table fits its panel at every width and
+   never becomes a silent horizontal scroller that pushes the ROAS verdict — the
+   point of every row — off screen.
+   Column widths are declared once, on the header, and the body inherits them —
+   `table-layout:fixed` reads the first row only, so repeating widths per cell is
+   dead weight that drifts out of sync. */
+table.grid-t{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
+table.grid-t th{font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-soft);font-weight:500;text-align:right;
+  padding:0 10px 10px;border-bottom:1px solid var(--ink);vertical-align:bottom}
+/* Headers wrap rather than force the row taller than its content: a two-line label is
+   cheap, a nowrap label that cannot fit silently steals width from the figures. */
+table.grid-t th{white-space:normal;text-wrap:balance}
+table.grid-t td{padding:11px 10px;border-bottom:1px solid var(--line-soft);
+  text-align:right;font-family:var(--mono);white-space:nowrap}
+/* The name column is the only prose in the table: sans, left, and allowed to wrap
+   between characters — CJK has no spaces to break at. */
+table.grid-t th.c-name,table.grid-t td.c-name{text-align:left;font-family:var(--sans);
+  white-space:normal;overflow-wrap:anywhere;width:26%}
+table.grid-t th.c-roas,table.grid-t td.c-roas{width:19%}
+/* Colour, not opacity: `opacity` fades a cell's own background as well as its text,
+   which cuts the total row's fill into visible segments. */
+table.grid-t td.soft{color:var(--ink-soft)}
+table.grid-t tbody tr:hover td{background:rgba(12,16,45,.025)}
+table.grid-t tr:last-child td{border-bottom:0}
+table.grid-t tr.t-tot td{border-top:1px solid var(--line);background:var(--tint);
+  font-weight:600}
+table.grid-t tr.t-tot:hover td{background:var(--tint)}
+/* An unspent segment is listed for completeness and demoted, not coloured as a failure. */
+table.grid-t tr.neg td{color:var(--ink-soft)}
+.verdict.off{color:var(--ink-soft);font-weight:500}
+
+/* ---- logbook ---------------------------------------------------------- */
+.lg-day{display:grid;grid-template-columns:150px minmax(0,1fr);gap:var(--s3);
+  padding:var(--s3) 0;border-top:1px solid var(--line)}
+.lg-day:first-child{border-top:0;padding-top:0}
+.lg-date{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.04em;
+  padding-top:2px}
+.lg-items{display:grid;gap:var(--s2);min-width:0}
+.lg-card{border:1px solid var(--line);border-left:3px solid var(--line);
+  border-radius:var(--r-m);background:var(--sand);padding:var(--s2)}
+.lg-card.opt{border-left-color:var(--deep)}
+.lg-card.pause,.lg-card.alert{border-left-color:var(--pink)}
+.lg-card.ok{border-left-color:var(--sky)}
+.lg-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.lg-kind{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;
+  border:1px solid var(--line);border-radius:var(--r-s);padding:2px 7px;color:var(--ink-soft)}
+.lg-kind.opt{color:var(--deep);border-color:rgba(50,86,222,.32)}
+.lg-kind.pause,.lg-kind.alert{color:var(--pink-txt);border-color:rgba(194,10,118,.32)}
+.lg-tag{font-size:13px;font-weight:600}
+.lg-body{margin:0;color:var(--ink-soft);font-size:13px;line-height:1.6;max-width:74ch}
+.lg-m{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s3);margin:var(--s2) 0 0;
+  border-top:1px solid var(--line-soft);padding-top:var(--s1)}
+.lg-m div{min-width:0}
+.lg-m dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-soft)}
+.lg-m dd{margin:2px 0 0;font-family:var(--mono);font-size:13px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+
+/* ---- vendor reconciliation (internal edition only) -------------------- */
+/* Deliberately the plainest block on the page: numbered rows, one hairline each, no
+   card and no fill. It is a checklist to work through with the vendor, not a finding
+   to present, and giving it panel chrome would make it compete with the FINDING alert
+   for the reader's first look. */
+.vr{display:grid;gap:0}
+/* Every child is placed explicitly. Auto-placement would put the severity chip in the
+   text column's first row and push the body prose down into the number gutter, because
+   the sparse algorithm fills row-by-row and does not know the first column is a gutter. */
+.vr-i{display:grid;grid-template-columns:26px minmax(0,1fr) 84px;gap:0 var(--s2);
+  align-items:start;padding:var(--s3) 0;border-top:1px solid var(--line)}
+.vr-i>.vr-n{grid-area:1 / 1}
+.vr-i>.vr-s{grid-area:1 / 3}
+.vr-i>h4{grid-area:1 / 2} .vr-i>p{grid-area:2 / 2} .vr-i>.vr-ev{grid-area:3 / 2}
+.vr-i:first-child{border-top:0;padding-top:var(--s1)}
+.vr-n{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink-soft);
+  padding-top:2px}
+.vr-i h4{margin:0 0 6px;font-size:14px;line-height:1.45;font-weight:600}
+.vr-i p{margin:0;color:var(--ink-soft);font-size:13px;line-height:1.65;max-width:78ch}
+/* The evidence is what makes an item actionable with the vendor — the row or the daily
+   series they have to look at — so it is monospaced and set apart, never inside the prose. */
+.vr-ev{margin:var(--s1) 0 0;font-family:var(--mono);font-size:11px;line-height:1.6;
+  color:var(--ink-soft);border-left:2px solid var(--line);padding-left:10px;
+  overflow-wrap:anywhere}
+/* Severity sits in its own column, right-aligned against the text block, so the three
+   levels form a scannable strip — the reader can see at a glance how many are blocking
+   without reading a word. */
+.vr-s{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;text-align:right;padding-top:3px;white-space:nowrap}
+.vr-s.block{color:var(--bad)} .vr-s.watch{color:var(--ink-soft)} .vr-s.note{color:var(--deep)}
+.vr-sum{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s3);margin:0 0 var(--s3);
+  font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+.vr-sum b{color:var(--ink)}
+
+/* ---- notes + footer --------------------------------------------------- */
+.notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s3);
+  margin-top:var(--s6);border-top:1px solid var(--ink);padding-top:var(--s3)}
+.notes h4{margin:0 0 var(--s1);font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft)}
+.notes ul{margin:0;padding-left:16px;color:var(--ink-soft);font-size:12px;line-height:1.75}
+.notes code{font-family:var(--mono);font-size:11px}
+.foot{margin-top:var(--s4);display:flex;justify-content:space-between;gap:var(--s2);
+  flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+
+/* ---- responsive: drop columns before dropping alignment --------------- */
+@media screen and (max-width:1000px){
+  .hero{grid-template-columns:1fr}
+  .hero-r{border-left:0;border-top:1px solid var(--line)}
+  .m-grid{grid-template-columns:1fr 1fr 1fr}
+  .gauge-panel{grid-template-columns:1fr;gap:var(--s3)}
+  .mx-grid{grid-template-columns:1fr}
+  .notes{grid-template-columns:1fr 1fr}
+}
+@media screen and (max-width:640px){
+  .m-grid{grid-template-columns:1fr 1fr}
+  .m-cell.focal{grid-column:1 / -1}
+  .m-cell.focal .m-v{font-size:44px}
+  /* Six cells over two columns leaves the last row half empty, and an empty grid area
+     shows the ink that draws the hairlines — a dark block on a page that has to stay
+     light. The trailing cell spans the row instead. */
+  .m-cell:last-child{grid-column:1 / -1}
+  .mx-cells{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .only-wide{display:none} .only-narrow{display:block}
+  .lg-day{grid-template-columns:1fr;gap:var(--s2)}
+  /* The severity column costs 84px + a gutter, which at this width is taken straight out
+     of the prose. It moves onto the number's line instead: the pairing is what carries the
+     meaning, and keeping them adjacent loses nothing that the right-hand column gave. */
+  .vr-i{grid-template-columns:26px minmax(0,1fr)}
+  .vr-i>.vr-s{grid-area:1 / 2;text-align:left;padding-top:0;margin-bottom:4px}
+  .vr-i>h4{grid-area:2 / 2} .vr-i>p{grid-area:3 / 2} .vr-i>.vr-ev{grid-area:4 / 2}
+  .notes{grid-template-columns:1fr}
+  h1{font-size:28px}
+  /* The wordmark now occupies 74px of a 320px bar, so the status tag on the right no
+     longer fits on one line and was pushing 29px past the viewport. The mark and its
+     context label are the identity and stay; the tag repeats what the hero already
+     states, so it is the one that goes. */
+  .topbar .tag{display:none}
+}
+/* Table breakpoints are set by where the figures actually stop fitting, measured in the
+   browser — not at the layout's own 640/520 steps. Seven columns need ~850px of table;
+   below that `1,107.55` starts clipping inside its cell, which no linter reports because
+   the table itself never overflows. */
+/* Column-hiding is positional, so it MUST be scoped per table — the two tables that use
+   .grid-t have different columns in the same positions. Unscoped, the 880px rule that
+   correctly drops 佔比/CTR from the audience table would drop 正式期花費 and 日均 from the
+   scenario table, i.e. exactly the two figures that table exists to deliver. Each table
+   therefore declares its own drop order, from least decision-bearing inward. */
+@media screen and (max-width:880px){
+  /* Audience: 佔比 and CTR are context at this width; name / spend / paid / CPA / ROAS
+     carry the comparison. Never shrink figures until they collide — drop columns. */
+  table.t-aud th:nth-child(3),table.t-aud td:nth-child(3),
+  table.t-aud th:nth-child(4),table.t-aud td:nth-child(4){display:none}
+  /* Scenario: 所需付款額 is derivable (花費 × ROAS) and drives no decision on its own. */
+  table.t-scale th:nth-child(6),table.t-scale td:nth-child(6){display:none}
+  table.grid-t th.c-name,table.grid-t td.c-name{width:34%}
+  table.grid-t th.c-roas,table.grid-t td.c-roas{width:24%}
+}
+@media screen and (max-width:560px){
+  /* Four columns is the floor for both tables. Audience drops CPA — the sharpest
+     comparison, already spelled out in the caption, so the finding survives.
+     Scenario drops 對現節奏 — a ratio the reader can see from 日均 vs the header. */
+  table.grid-t{font-size:12px}
+  table.t-aud th:nth-child(6),table.t-aud td:nth-child(6){display:none}
+  table.t-scale th:nth-child(5),table.t-scale td:nth-child(5){display:none}
+  table.grid-t th,table.grid-t td{padding-left:6px;padding-right:6px}
+  table.grid-t th.c-name,table.grid-t td.c-name{width:38%}
+  table.grid-t th.c-roas,table.grid-t td.c-roas{width:28%}
+}
+/* 420px, not 380px: at 390 (the common phone width) the four-column layout gives the cost
+   column 50px for a figure that needs 62px, so `3,389.36` clipped inside its own cell while
+   the table itself fitted — invisible to both verifiers. Measured, not guessed. */
+@media screen and (max-width:420px){
+  /* At the 320px floor the table is only ~222px wide and four columns cannot hold an
+     8-glyph mono figure. Nothing left to drop — every remaining column is load-bearing —
+     so the cost column is given the room instead: the audience names wrap freely (they
+     are prose), while `3,389.36` cannot. Type steps down as well. Last resort, only here. */
+  table.grid-t{font-size:11px}
+  table.grid-t th,table.grid-t td{padding-left:3px;padding-right:3px}
+  table.grid-t th.c-name,table.grid-t td.c-name{width:27%}
+  /* Scoped: column 2 is the cost figure in the audience table (needs the room) and the
+     ROAS verdict in the scenario table (already sized by .c-roas). Giving 30% to both
+     would over-allocate the scenario table's verdict and starve its 花費 column. */
+  table.t-aud th:nth-child(2),table.t-aud td:nth-child(2){width:30%}
+  table.grid-t th.c-roas,table.grid-t td.c-roas{width:26%}
+  .verdict{font-size:11px;column-gap:3px}
+  .verdict i{width:5px;height:5px}
+  /* The English gloss is a courtesy, not the label. At this width it breaks mid-word
+     ("AUDIENC / E") and costs the header two lines, so it goes and the 中文 stays. */
+  table.grid-t th .en{display:none}
+}
+/* ---- print / PDF: A4 portrait ---------------------------------------- */
+/* The client edition is read as a PDF at least as often as in a browser, so print is a
+   designed layout rather than a fallback. Two paths arrive here — the build's headless
+   Chromium pass and the reader's own ⌘P — which is why every decision lives in CSS and
+   not in the generator's options: a rule set only in the generator would be missing
+   from exactly the copy someone prints for a meeting.
+
+   The page box is 210×297mm less the margins: 184mm of usable width, ~696 CSS px once
+   Chromium maps mm at 96dpi. That is below the 880px table step and below the 1000px
+   layout step, and none of the screen rules reach here because all five are scoped
+   `@media screen` — so print declares its own column counts instead of inheriting a
+   1180px desktop grid squeezed onto a sheet. */
+@page{
+  size:A4 portrait;
+  /* Asymmetric on purpose. The top and bottom margins are the margin boxes Chromium
+     draws the running header and page number into, so they need more room than the
+     sides; 13mm is the narrowest side margin that still reads as a margin and not as a
+     trim edge. */
+  margin:15mm 13mm 14mm;
+}
+@media print{
+  /* Every background in this document is structural, not decoration: the KPI strip's
+     dividers are one ink background showing through 1px gaps, and the verdict colours
+     are the reading of the data. With "Background graphics" unchecked — the browser
+     dialog's default — the strip loses its hairlines entirely and the traffic light
+     goes monochrome, so the whole document opts out of that stripping rather than a
+     hand-kept list of selectors that the next chart would fall off. */
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* The 42px hairline grid is screen texture. On paper it is 6 sheets of faint ruling
+     that competes with the tables' own rules, so the ground goes flat.
+     White, not --paper: in paged media the body background is painted across the content
+     box rather than the sheet, so a tinted ground stops at the bottom margin and leaves a
+     71mm slab of colour with white beneath it wherever a section ends short of the page —
+     which reads as a stray panel, not as background. The sheet is the ground in print. The
+     warm tint stays where it is bounded and deliberate: the KPI strip's cells, the hero and
+     the panels each carry their own. */
+  body{background:#fff;font-size:13px}
+  /* Section rhythm tightens: --s6 is 56px of air between sections, which on a 267mm
+     text block is a quarter of a page spent on white space. */
+  :root{--s6:34px; --s5:26px; --s4:24px}
+  .shell{max-width:none;margin:0;padding:0}
+  .topbar{max-width:none;min-height:0;padding:0 0 var(--s2);background:none}
+  /* Anything that only makes sense with a cursor. Nothing in the dashboard uses it
+     today; the hub's print button lives in the hub, not here — the class exists so a
+     future control cannot silently print itself into a client deliverable. */
+  .no-print{display:none !important}
+
+  /* Each numbered section opens a page. In a delivered report this is what lets the
+     reader hold "01 / KPI ends here, 02 / Performance starts here" — the alternative
+     packs more per sheet and makes a section boundary indistinguishable from a panel
+     boundary. The white space it leaves at a section's end reads as intentional in a
+     report in a way a mid-panel break never does.
+
+     `:not(.hero) ~ section` is what keeps 對標結果 on page 1 with the cover: the hero
+     is itself a <section>, so a bare `section ~ section` would break before 01 as well
+     and leave the first page holding an identity block and nothing measured. Read as
+     "a section preceded by some section other than the hero" — 02, 03, and the
+     internal-only 04.
+
+     A heading stranded at the foot of a page is the most common print defect and the
+     cheapest to prevent. */
+  main.shell>section:not(.hero)~section{break-before:page}
+  .sec-h,.panel-h,.cap,h1,h3,h4{break-after:avoid}
+  p{orphans:3;widows:3}
+
+  /* Nothing that reads as one object may be cut in half. `.panel` is listed knowing
+     that a panel taller than a page will still break — browsers ignore an impossible
+     avoid — which is why the tables below also repeat their headers. */
+  .hero,.alert,.m-grid,.m-cell,.panel,.mx,.gauge-panel,.chart,.ledger>div,
+  .lg-day,.lg-card,.vr-i,.notes,.notes>div,.foot,.tl li{break-inside:avoid}
+  /* When a long table does split, the reader needs to know what the columns are on the
+     second half. */
+  table.grid-t thead{display:table-header-group}
+  table.grid-t tr{break-inside:avoid}
+
+  /* Column counts for 696px, chosen the same way the screen steps were: by where the
+     figures stop fitting, not at the layout's own breakpoints. */
+  .hero{grid-template-columns:1fr}
+  .hero-r{border-left:0;border-top:1px solid var(--line)}
+  .m-grid{grid-template-columns:1fr 1fr 1fr}
+  /* 52px is sized for a 1.6fr track. In a third of 696px the figure plus its
+     `/ KPI 1.0` qualifier is a nowrap flex line that would overrun the cell, and the
+     overrun is invisible — `.m-f` has no scrollbar to give it away. */
+  .m-cell.focal .m-v{font-size:40px}
+  .m-cell.focal .m-u{font-size:13px}
+  .gauge-panel{grid-template-columns:1fr;gap:var(--s3)}
+  /* One card per row, which gives each bid strategy's four cells 174px instead of 84px
+     — the width `1,107.55` needs at 15px mono. */
+  .mx-grid{grid-template-columns:1fr}
+  .notes{grid-template-columns:1fr 1fr}
+  /* The trend keeps its SVG form on paper. It scales with the page box, and the row
+     fallback exists for phone widths where an axis cannot be read, not for A4. */
+  .only-wide{display:block} .only-narrow{display:none}
+
+  /* Both tables keep every column. Dropping 佔比 and CTR is right on a phone, where the
+     alternative is clipping; in a delivered PDF it is content removed from a document
+     the client keeps. Seven columns fit at 696px once the type steps down — at 11.5px
+     the 8-glyph 成本 figure needs 55px of a 76px cell. */
+  table.grid-t{font-size:11.5px}
+  table.grid-t th,table.grid-t td{padding-left:6px;padding-right:6px}
+  table.grid-t td{padding-top:9px;padding-bottom:9px}
+  .verdict{font-size:11.5px}
+  /* Hover is meaningless here and the tint would print as a grey band. */
+  table.grid-t tbody tr:hover td{background:none}
+  table.grid-t tr.t-tot:hover td{background:var(--tint)}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="lockup"><svg class="wordmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 1 862 233" role="img" aria-label="MIA" focusable="false"><g class="wm-letters" fill="#F10D93"><path d="M247.13,232.66C246.34,231.70 245.94,210.11 245.76,157.92L245.50,84.53L243.79,84.20C242.14,83.88 237.12,87.90 177.67,137.23C164.56,148.10 153.08,156.99 152.17,156.99C151.25,156.98 130.48,140.55 106.00,120.49C75.92,95.83 60.85,84.09 59.50,84.25L57.50,84.50L57.00,158.50L56.50,232.50L28.50,232.50L0.50,232.50L0.25,118.11C0.06,34.41 0.29,3.35 1.12,2.36C2.01,1.28 7.23,1.00 26.11,1.00L49.99,1.00L59.74,9.20C69.76,17.62 118.26,58.69 127.89,66.90C145.13,81.60 150.68,85.96 152.17,85.98C153.09,85.99 169.29,72.86 188.17,56.81C207.05,40.75 229.56,21.62 238.18,14.29L253.87,0.96L277.68,1.23L301.50,1.50L301.50,116.79L301.50,232.07L300.00,233.02C299.16,233.55 287.45,233.98 273.37,233.98C253.53,234.00 248.01,233.72 247.13,232.66Z"/><path d="M361.62,232.29C361.23,231.90 360.97,180.26 361.05,117.54C361.14,41.21 361.53,3.09 362.22,2.25C363.00,1.30 370.23,1.00 392.12,1.00C414.50,1.00 421.03,1.28 421.11,2.25C421.17,2.94 421.14,51.42 421.03,110.00C420.90,179.93 421.17,216.16 421.82,215.50C422.75,214.56 448.25,169.79 493.29,90.00C504.32,70.47 520.12,42.58 528.42,28.00L543.50,1.50L574.29,1.24L605.08,0.97L606.59,3.74C627.77,42.43 704.32,179.21 721.67,209.37C727.96,220.29 732.96,229.97 732.79,230.87L732.47,232.50L622.71,232.75L512.94,233.01L512.38,231.55C512.05,230.70 516.48,223.13 523.07,213.30C535.17,195.24 542.82,184.10 544.22,182.50C544.77,181.87 562.89,181.31 592.79,181.00L640.47,180.50L640.82,178.70C641.15,176.99 628.49,154.50 592.01,92.00C579.37,70.34 574.92,63.50 573.46,63.50C572.02,63.50 568.43,68.77 559.13,84.50C545.80,107.06 503.99,178.82 485.13,211.50C478.79,222.50 473.12,231.83 472.55,232.23C471.20,233.18 362.57,233.23 361.62,232.29Z"/></g><rect class="wm-cursor" x="760" y="202" width="102" height="31" fill="#60BDF1"/></svg><span class="rule"></span><span class="ctx">Campaign Intelligence</span></div>
+  <span class="tag">CHC RTB · 內部版 Internal</span>
+</header>
+
+<main class="shell">
+
+  <section class="hero" aria-label="Campaign identity">
+    <div class="hero-l">
+      <div class="prep">
+        <span>Prepared for</span>
+        <div class="prep-mark"><svg class="brandmark" role="img" aria-label="Chantecaille" focusable="false" fill="currentColor" viewBox="0 0 990 53.59" xmlns="http://www.w3.org/2000/svg"><g><path d="M41.87,1.35v17.77h-1.98c-2.33-8.35-5.85-16.57-15.45-16.57-10.8,0-15.75,7.91-15.75,24.25,0,18.07,9,24.25,15.52,24.25,11.92,0,16.27-7.9,17.17-17.92h2.13c-.69,12.35-6.55,20.47-20.66,20.47C10.04,53.59,0,40.72,0,26.79S10.04,0,23.68,0c6.68,0,12.08,4.21,13.35,4.21,1.35,0,2.63-1.51,3.08-2.86h1.76Z"></path><path d="M87.76,52.71v-2.55c5.62,0,6.9-1.36,6.9-4.98V8.41c0-3.62-1.28-4.98-6.9-4.98V.88h21.84v2.55c-6.06,0-7.34,1.35-7.34,4.98v15.83h22.15v-15.83c0-3.62-1.28-4.98-7.03-4.98V.88h21.39v2.55c-5.47,0-6.75,1.35-6.75,4.98v36.77c0,3.62,1.28,4.98,7.05,4.98v2.55h-21.54v-2.55c5.61,0,6.89-1.36,6.89-4.98v-18.39h-22.15v18.39c0,3.62,1.28,4.98,7.48,4.98v2.55h-21.99Z"></path><path d="M198.73,52.71v-2.55c-6.44,0-7.94-1.06-7.94-3.93,0-2.11,2.17-6.65,3.45-10.89h17.67c2.02,4.39,4.19,10.43,4.19,12.02,0,2.2-.3,2.8-5.91,2.8v2.55h20.82v-2.55c-4.34,0-6.07-1.36-8.31-7.18L206.29.59h-2.7l-15.13,41.55c-1.65,4.62-3.22,8.02-9.29,8.02v2.55h19.54ZM195.28,32.2l7.49-19.79,7.94,19.79h-15.43Z"></path><path d="M284.77.88l26.98,38.82h.15V8.41c0-3.62-1.28-4.98-7.42-4.98V.88h17.06v2.55c-5.25,0-6.52,1.36-6.52,4.98v44.79h-2.91l-29.44-41.92h-.15v33.9c0,3.62,1.27,4.98,7.87,4.98v2.55h-18.41v-2.55c6.14,0,7.42-1.35,7.42-4.98V6.53c-2.4-2.79-3.75-3.09-7.57-3.09V.88h12.94Z"></path><path d="M405.71,18.66c-1.57-9.5-5.03-15.23-15.62-15.23v41.74c0,3.62,1.28,4.98,7.21,4.98v2.55h-22.03v-2.55c5.93,0,7.21-1.36,7.21-4.98V3.44c-10.59,0-14.05,5.73-15.62,15.23h-2.36l.45-17.78h42.66l.45,17.78h-2.36Z"></path><path d="M494.65,52.71h-43.71v-2.55c5.69,0,6.97-1.36,6.97-4.98V8.4c0-3.61-1.27-4.96-6.97-4.96V.88h42.44l.45,18.5h-2.35c-3.61-11.43-7.83-15.94-17.83-15.94-4.41,0-8.14,1.2-8.14,4.96v15.95c7.84-.16,11.2-.91,12.4-9.11l2.13-.07v20.79h-2.13c-1.19-8.16-4.56-8.92-12.4-9.07v19.94c0,2.42,1.56,3.33,6.12,3.33,10.05,0,17.82-2.26,21.11-16.84h2.35l-.45,19.4Z"></path><path d="M583.4,1.35v17.77h-1.99c-2.32-8.35-5.84-16.57-15.44-16.57-10.8,0-15.75,7.91-15.75,24.25,0,18.07,8.99,24.25,15.52,24.25,11.92,0,16.28-7.9,17.18-17.92h2.13c-.68,12.35-6.56,20.47-20.66,20.47-12.82,0-22.85-12.87-22.85-26.8s10.03-26.79,23.68-26.79c6.68,0,12.07,4.21,13.35,4.21,1.36,0,2.63-1.51,3.08-2.86h1.76Z"></path><path d="M646.1,52.71v-2.55c-6.43,0-7.94-1.06-7.94-3.93,0-2.11,2.17-6.65,3.45-10.89h17.67c2.03,4.39,4.2,10.43,4.2,12.02,0,2.2-.3,2.8-5.92,2.8v2.55h20.82v-2.55c-4.34,0-6.06-1.36-8.31-7.18L653.66.59h-2.7l-15.12,41.55c-1.65,4.62-3.22,8.02-9.28,8.02v2.55h19.54ZM642.65,32.2l7.49-19.79,7.94,19.79h-15.44Z"></path><path d="M739.95.88v2.55c-5.92,0-7.2,1.36-7.2,4.98v36.77c0,3.62,1.28,4.98,7.2,4.98v2.55h-22v-2.55c5.92,0,7.19-1.35,7.19-4.98V8.41c0-3.62-1.27-4.98-7.19-4.98V.88h22Z"></path><path d="M821.66,52.71h-39.3v-2.55c5.47,0,6.75-1.36,6.75-4.98V8.41c0-3.62-1.28-4.98-6.6-4.98V.88h21.41v2.55c-5.93,0-7.21,1.35-7.21,4.98v36.77c0,3.62,1.66,4.98,5.49,4.98,6.45,0,14.26-2.26,17.55-16.81h2.36l-.45,19.36Z"></path><path d="M902.92,52.71h-39.29v-2.55c5.47,0,6.74-1.36,6.74-4.98V8.41c0-3.62-1.27-4.98-6.59-4.98V.88h21.41v2.55c-5.94,0-7.21,1.35-7.21,4.98v36.77c0,3.62,1.65,4.98,5.48,4.98,6.45,0,14.25-2.26,17.56-16.81h2.36l-.46,19.36Z"></path><path d="M989.56,52.71h-43.72v-2.55c5.7,0,6.97-1.36,6.97-4.98V8.4c0-3.61-1.27-4.96-6.97-4.96V.88h42.44l.45,18.5h-2.35c-3.62-11.43-7.83-15.94-17.82-15.94-4.41,0-8.15,1.2-8.15,4.96v15.95c7.85-.16,11.21-.91,12.41-9.11l2.13-.07v20.79h-2.13c-1.19-8.16-4.56-8.92-12.41-9.07v19.94c0,2.42,1.58,3.33,6.13,3.33,10.05,0,17.82-2.26,21.11-16.84h2.35l-.45,19.4Z"></path></g></svg>
+          <span class="cn">香缇卡</span></div>
+      </div>
+      <p class="eyebrow">MIA / Client Campaign Status</p>
+      <h1>CHC RTB Campaign<br>朋友圈单品页投放</h1>
+      <p class="hero-copy">日上 × 香缇卡 朋友圈 RTB 投放成效報告。本期為 7 天冷啟動期，
+        以 Single Brand ROAS 對標客戶 KPI，並列學習結論、正式期達標條件與
+        每日走勢，附投放期間的優化與異常日志。</p>
+      <div class="scope">
+        <span>campaign://</span><strong>0908–0924 日上RTB 香缇卡</strong>
+        <span class="sep"></span><span>朋友圈 · 单品页</span>
+      </div>
+    </div>
+    <div class="hero-r">
+      <div class="hero-meta">
+        <div><span>Data window</span><strong class="mono">2026/09/08 – 2026/09/14</strong></div>
+        <div><span>KPI</span><strong class="mono">Single Brand ROAS 1.0</strong></div>
+        <div><span>Reporting currency</span><strong class="mono">CHF</strong></div>
+        <div><span>Campaign status</span><strong><span class="status ok"><i></i>投放中</span></strong></div>
+      </div>
+    </div>
+  </section>
+
+  
+  <div class="alert ok">
+    <div class="ic">FINDING</div>
+    <div>
+      <h3>冷啟動期已找到可行策略；決定全期成敗的是正式期 10 天的提量幅度</h3>
+      <p>D1–D7 全部落在 7 天冷啟動期內，0.26 是<strong>學習成本，不是結算數</strong>。學到的東西明確：cpc出价
+        CHF 2,668（佔期間成本
+        73%）換到 ROAS
+        0.09，下单出价 CHF 986
+        換到 <strong>0.70</strong> —— 相差 7 倍，學費已經付出且有結論。
+        真正的風險在算式：至今累積 CHF 2,709 待攤回，它會留在全期分母裡，
+        正式期只剩 10 天。若<strong>維持現有節奏</strong>（近 3 日日均
+        CHF 202，10 天共 CHF 2,024），剩餘天數必須做到 ROAS
+        <strong>2.34</strong> 才能讓全期回到 KPI 1.0 ——
+        而本案至今證明過的最好成績是 0.70，差距 3.3 倍。換句話說，
+        <strong>不提預算就沒有達標路徑</strong>：把剩餘天數花費提到
+        CHF 2,709（日均 CHF 271，
+        現節奏的 1.3×）時，所需 ROAS 降到 2.0；
+        提到 CHF 5,417（2.7×）
+        時降到 1.5 —— 花得越多，單位效率的門檻越低，因為赤字被攤薄。
+        建議：<strong>立即以 下单出价 提量</strong>，同時把加購 → 下單
+        （現行 1.8%）
+        當作同等優先的修復項 —— 提量與提效必須並行；cpc出价 不再復用。</p>
+    </div>
+  </div>
+
+  <section aria-labelledby="s1">
+    <div class="sec-h"><span class="k">01 / KPI</span>
+      <h2 id="s1">對標結果</h2>
+      <span class="note">Single Brand ROAS = 付款金額 ÷ 成本 · 冷啟動期 D1–D7</span></div>
+
+    <div class="m-grid"><div class="m-cell focal">
+  <span class="m-l">冷啟動期 ROAS<span class="en">Learning phase</span></span>
+  <span class="m-f"><strong class="m-v bad">0.26</strong><span class="m-u">/ KPI 1.0</span></span>
+  <span class="m-s">學習成本，非結算數．D1–D7 / 7 天</span>
+</div>
+<div class="m-cell">
+  <span class="m-l">最新一日 09/14<span class="en">Latest day ROAS</span></span>
+  <span class="m-f"><strong class="m-v watch">0.61</strong></span>
+  <span class="m-s">未達 KPI．較前一日回落</span>
+</div>
+<div class="m-cell">
+  <span class="m-l">學習期成本<span class="en">Spend</span></span>
+  <span class="m-f"><strong class="m-v">3,654</strong><span class="m-u">CHF</span></span>
+  <span class="m-s">RMB 29,284</span>
+</div>
+<div class="m-cell">
+  <span class="m-l">付款金額<span class="en">Paid revenue</span></span>
+  <span class="m-f"><strong class="m-v">945</strong><span class="m-u">CHF</span></span>
+  <span class="m-s">RMB 7,576</span>
+</div>
+<div class="m-cell">
+  <span class="m-l">待攤回赤字<span class="en">Carried deficit</span></span>
+  <span class="m-f"><strong class="m-v">2,709</strong><span class="m-u">CHF</span></span>
+  <span class="m-s">成本 － 付款額．計入全期分母</span>
+</div>
+<div class="m-cell">
+  <span class="m-l">現行主力 下单出价<span class="en">Lead strategy ROAS</span></span>
+  <span class="m-f"><strong class="m-v watch">0.70</strong></span>
+  <span class="m-s">CHF 986．佔期間成本 27%</span>
+</div></div>
+
+    <div class="period"><span>Report data period</span><strong>2026/09/08 – 2026/09/14</strong></div>
+    <p class="ph">冷啟動期 7 天（09/08–09/14）
+      · 正式期 09/15–09/24
+      共 10 天．本報告資料全部落在冷啟動期內</p>
+
+    <div class="panel">
+      <div class="panel-h"><h3>冷啟動期 ROAS 對 KPI 1.0 的位置</h3>
+        <span class="src">刻度以 KPI 為滿格</span></div>
+      <div class="gauge-panel">
+        <div>
+          <p class="cap">刻度以 KPI 為滿格而非以資料為滿格：若按資料縮放，
+            0.26 會被畫成滿條，失去唯一有意義的比較。虛線為 KPI 半程，
+            也是紅／灰判讀的分界。
+            <span class="cav">註：本圖為<strong>7 天冷啟動期</strong>的位置，非合約結算數。正式期（09/15–09/24）尚未開始，全期 ROAS 待正式期資料回來後才成立。</span></p>
+          <svg viewBox="0 0 880 64" class="chart gauge" role="img" aria-label="Cumulative ROAS 0.26 against KPI 1.0">
+<rect x="0" y="26" width="880" height="20" rx="3" class="gtrack"/>
+<rect x="0" y="26" width="227.7" height="20" rx="3" class="gfill bad"/>
+<line x1="440" y1="21" x2="440" y2="51" class="gtick"/>
+<text x="440" y="15" class="glab" text-anchor="middle">KPI 半程 0.50</text>
+<line x1="879" y1="17" x2="879" y2="55" class="gkpi"/>
+<text x="879" y="11" class="glab strong" text-anchor="end">KPI 1.0</text>
+<text x="0" y="63" class="glab">0</text>
+<text x="879" y="63" class="glab" text-anchor="end">實際達成 26%</text>
+</svg>
+        </div>
+        <dl class="ledger">
+          <div><dt>KPI 所需付款金額</dt>
+            <dd>CHF 3,654.03<span class="eq">＝ 學習期成本</span></dd></div>
+          <div><dt>實際付款金額</dt><dd>CHF 945.32</dd></div>
+          <div><dt>待攤回赤字</dt><dd class="miss">CHF 2,708.70</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    
+    <div class="panel">
+      <div class="panel-h"><h3>正式期 10 天要達到 KPI 1.0 的條件</h3>
+        <span class="src">至今成本與付款額同時留在全期算式中</span></div>
+      <p class="cap">至今累積的 CHF 2,709 待攤回會留在全期分母，所以「正式期做得好」
+        並不等於「全期達標」—— 還要看<strong>做多大</strong>。首列是不提預算的情況，
+        它需要 ROAS 2.34（已證明過的最好成績為 0.70）；
+        以下每一列是提預算後所需的效率門檻，花費越高門檻越低，因為赤字被攤薄。
+        <span class="cav">註一：本表為條件試算，非預測 —— 不假設正式期會做到哪個 ROAS，
+        只列出各情境的達標條件供決策。
+        註二：正式期 ROAS 若僅達 1.0（打平），赤字永遠攤不回，無論花費多少 ——
+        算式 X ＝ 赤字 ÷（r －1）在 r ＝ 1 時無解。
+        這是提量必須同時<strong>提效</strong>的原因。</span></p>
+      <table class="grid-t t-scale"><thead><tr>
+ <th class="c-name" scope="col">情境<span class="en"> Scenario</span></th>
+ <th class="c-roas" scope="col">所需 ROAS<span class="en"> required</span></th>
+ <th scope="col">正式期花費 CHF</th>
+ <th scope="col">日均 CHF<span class="en"> / 10d</span></th>
+ <th scope="col">對現節奏</th>
+ <th scope="col">所需付款額 CHF</th>
+ </tr></thead><tbody><tr class="t-tot"><td class="c-name">維持現節奏（不提預算）</td><td class="c-roas"><span class="verdict bad"><i></i>2.34</span></td><td>2,024</td><td>202</td><td class="soft">1.0×</td><td class="soft">4,732</td></tr><tr><td class="c-name">提預算至 CHF 542/日</td><td class="c-roas"><span class="verdict watch"><i></i>1.50</span></td><td>5,417</td><td>542</td><td class="soft">2.7×</td><td class="soft">8,126</td></tr><tr><td class="c-name">提預算至 CHF 271/日</td><td class="c-roas"><span class="verdict watch"><i></i>2.00</span></td><td>2,709</td><td>271</td><td class="soft">1.3×</td><td class="soft">5,417</td></tr><tr><td class="c-name">可降至 CHF 181/日</td><td class="c-roas"><span class="verdict bad"><i></i>2.50</span></td><td>1,806</td><td>181</td><td class="soft">0.9×</td><td class="soft">4,515</td></tr><tr><td class="c-name">可降至 CHF 135/日</td><td class="c-roas"><span class="verdict bad"><i></i>3.00</span></td><td>1,354</td><td>135</td><td class="soft">0.7×</td><td class="soft">4,063</td></tr></tbody></table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>每日 ROAS 走勢</h3>
+        <span class="src">柱色＝對 KPI 的判讀 · 柱下為當日成本</span></div>
+      <p class="cap">冷啟動期的價值就在這條走勢：9/10 切
+        下单出价 起連 0 日走高，9/13 以
+        1.07 首次越過 KPI —— 學習已經完成，策略已經找到。
+        走勢無法回答的是規模：9/14 當日成本僅 CHF 265、付款
+        4 筆，少一筆即掉到
+        0.45。
+        <span class="cav">註：ROAS 走高同時來自成本收縮 —— 收入從 CHF
+        93 到 CHF 160 大致持平，
+        成本卻降了 75%。
+        單日高 ROAS 尚未在有量的情況下驗證過，這正是正式期第一週要證明的事。</span></p>
+      <div class="only-wide"><svg viewBox="0 0 880 190" class="chart" role="img" aria-label="Daily ROAS versus KPI 1.0">
+<line x1="4" y1="156" x2="828" y2="156" class="axis"/>
+<line x1="4" y1="50.1" x2="828" y2="50.1" class="gkpi dash"/>
+<text x="836" y="54.1" class="glab strong">KPI 1.0</text>
+<line x1="4" y1="103.0" x2="828" y2="103.0" class="gtick"/>
+<text x="836" y="107.0" class="glab">0.50</text>
+<rect x="35.9" y="146.6" width="54.0" height="9.4" rx="2" class="gfill bad"/>
+<text x="62.9" y="139.6" class="rval big bad-t" text-anchor="middle">0.09</text>
+<text x="62.9" y="172.0" class="glab" text-anchor="middle">09/08</text>
+<text x="62.9" y="184.0" class="glab dim" text-anchor="middle">1,045</text>
+<rect x="153.6" y="150.4" width="54.0" height="5.6" rx="2" class="gfill bad"/>
+<text x="180.6" y="143.4" class="rval big bad-t" text-anchor="middle">0.05</text>
+<text x="180.6" y="172.0" class="glab" text-anchor="middle">09/09</text>
+<text x="180.6" y="184.0" class="glab dim" text-anchor="middle">1,246</text>
+<rect x="271.3" y="120.2" width="54.0" height="35.8" rx="2" class="gfill bad"/>
+<text x="298.3" y="113.2" class="rval big bad-t" text-anchor="middle">0.34</text>
+<text x="298.3" y="172.0" class="glab" text-anchor="middle">09/10</text>
+<text x="298.3" y="184.0" class="glab dim" text-anchor="middle">558</text>
+<rect x="389.0" y="88.0" width="54.0" height="68.0" rx="2" class="gfill watch"/>
+<text x="416.0" y="81.0" class="rval big watch-t" text-anchor="middle">0.64</text>
+<text x="416.0" y="172.0" class="glab" text-anchor="middle">09/11</text>
+<text x="416.0" y="184.0" class="glab dim" text-anchor="middle">197</text>
+<rect x="506.7" y="67.7" width="54.0" height="88.3" rx="2" class="gfill watch"/>
+<text x="533.7" y="60.7" class="rval big watch-t" text-anchor="middle">0.83</text>
+<text x="533.7" y="172.0" class="glab" text-anchor="middle">09/12</text>
+<text x="533.7" y="184.0" class="glab dim" text-anchor="middle">235</text>
+<rect x="624.4" y="42.4" width="54.0" height="113.6" rx="2" class="gfill good"/>
+<text x="651.4" y="35.4" class="rval big good-t" text-anchor="middle">1.07</text>
+<text x="651.4" y="172.0" class="glab" text-anchor="middle">09/13</text>
+<text x="651.4" y="184.0" class="glab dim" text-anchor="middle">108</text>
+<rect x="742.1" y="91.8" width="54.0" height="64.2" rx="2" class="gfill watch"/>
+<text x="769.1" y="84.8" class="rval big watch-t" text-anchor="middle">0.61</text>
+<text x="769.1" y="172.0" class="glab" text-anchor="middle">09/14</text>
+<text x="769.1" y="184.0" class="glab dim" text-anchor="middle">265</text>
+<text x="836" y="172.0" class="glab dim">成本 CHF</text>
+</svg></div>
+      <div class="only-narrow"><ol class="tl">
+<li>
+  <span class="tl-d">09/08</span>
+  <span class="tl-bar"><i class="bad" style="width:8.3%"></i></span>
+  <span class="verdict bad"><i></i>0.09</span>
+  <span class="tl-s">CHF 1,045</span>
+</li>
+<li>
+  <span class="tl-d">09/09</span>
+  <span class="tl-bar"><i class="bad" style="width:4.9%"></i></span>
+  <span class="verdict bad"><i></i>0.05</span>
+  <span class="tl-s">CHF 1,246</span>
+</li>
+<li>
+  <span class="tl-d">09/10</span>
+  <span class="tl-bar"><i class="bad" style="width:31.6%"></i></span>
+  <span class="verdict bad"><i></i>0.34</span>
+  <span class="tl-s">CHF 558</span>
+</li>
+<li>
+  <span class="tl-d">09/11</span>
+  <span class="tl-bar"><i class="watch" style="width:59.8%"></i></span>
+  <span class="verdict watch"><i></i>0.64</span>
+  <span class="tl-s">CHF 197</span>
+</li>
+<li>
+  <span class="tl-d">09/12</span>
+  <span class="tl-bar"><i class="watch" style="width:77.7%"></i></span>
+  <span class="verdict watch"><i></i>0.83</span>
+  <span class="tl-s">CHF 235</span>
+</li>
+<li>
+  <span class="tl-d">09/13</span>
+  <span class="tl-bar"><i class="good" style="width:100.0%"></i></span>
+  <span class="verdict good"><i></i>1.07</span>
+  <span class="tl-s">CHF 108</span>
+</li>
+<li>
+  <span class="tl-d">09/14</span>
+  <span class="tl-bar"><i class="watch" style="width:56.5%"></i></span>
+  <span class="verdict watch"><i></i>0.61</span>
+  <span class="tl-s">CHF 265</span>
+</li>
+<li class="tl-kpi"><span>KPI 1.0</span></li>
+</ol></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s2">
+    <div class="sec-h"><span class="k">02 / Performance</span>
+      <h2 id="s2">投放成效</h2>
+      <span class="note">冷啟動期累計 · 7 天 · 104 筆素材日資料</span></div>
+
+    <div class="mx-grid"><article class="mx" style="--mx-accent:var(--pink)">
+  <div class="mx-head">
+    <div>
+      <span class="mx-l">出價方式</span>
+      <h3>下单出价</h3>
+    </div>
+    <span class="verdict watch"><i></i>ROAS 0.70
+      <em>達成 70%</em></span>
+  </div>
+  <div class="mx-cells"><div class="mx-cell"><span>成本 Cost</span><strong>CHF 986</strong></div>
+<div class="mx-cell"><span>曝光 Impressions</span><strong>482,655</strong></div>
+<div class="mx-cell"><span>點擊 Clicks</span><strong>5,125</strong></div>
+<div class="mx-cell"><span>CTR</span><strong>1.06%</strong></div>
+<div class="mx-cell"><span>CPM (RMB)</span><strong>16.38</strong></div>
+<div class="mx-cell"><span>CPC (RMB)</span><strong>1.54</strong></div>
+<div class="mx-cell"><span>加購 Add-to-cart</span><strong>979</strong></div>
+<div class="mx-cell"><span>付款 Paid</span><strong>15 · CHF 693</strong></div></div>
+</article>
+<article class="mx" style="--mx-accent:var(--sky)">
+  <div class="mx-head">
+    <div>
+      <span class="mx-l">出價方式</span>
+      <h3>cpc出价</h3>
+    </div>
+    <span class="verdict bad"><i></i>ROAS 0.09
+      <em>達成 9%</em></span>
+  </div>
+  <div class="mx-cells"><div class="mx-cell"><span>成本 Cost</span><strong>CHF 2,668</strong></div>
+<div class="mx-cell"><span>曝光 Impressions</span><strong>4,020,808</strong></div>
+<div class="mx-cell"><span>點擊 Clicks</span><strong>9,816</strong></div>
+<div class="mx-cell"><span>CTR</span><strong>0.24%</strong></div>
+<div class="mx-cell"><span>CPM (RMB)</span><strong>5.32</strong></div>
+<div class="mx-cell"><span>CPC (RMB)</span><strong>2.18</strong></div>
+<div class="mx-cell"><span>加購 Add-to-cart</span><strong>254</strong></div>
+<div class="mx-cell"><span>付款 Paid</span><strong>6 · CHF 253</strong></div></div>
+</article></div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>人群成本分布與 ROAS</h3>
+        <span class="src">條長＝成本 · 圓點＝對 KPI 的判讀</span></div>
+      <p class="cap">73% 的成本落在效率低於主力的
+        女性人群、美妆兴趣人群、竞品搜索人群（ROAS
+        0.08／0.07／0.16）；表現最好的通投
+        ROAS 0.70，只拿到 27% 預算
+        —— 預算沒有放在相對有效率的地方。
+        核心搜索人群消耗不足 CHF 1，本圖不列，明細表完整列出。
+        <span class="cav">註：人群與出價方式在本案未交叉測試，
+        上方出價方式卡片與本圖可能是同一批投放的兩種切法，非兩項獨立證據，
+        兩者的效果無法分離。</span></p>
+      <svg viewBox="0 0 860 158" class="chart" role="img" aria-label="Spend by audience">
+<text x="0" y="26" class="rlab">女性人群</text>
+<rect x="140" y="13" width="300" height="18" rx="2" class="track"/>
+<rect x="140" y="13" width="300" height="18" rx="2" class="bar"/>
+<text x="454" y="26" class="rval">CHF 1,108</text>
+<text x="552" y="26" class="rval soft">30% of spend</text>
+<circle cx="690" cy="21" r="4.5" class="lt-bad"/>
+<text x="704" y="26" class="rval">ROAS 0.08</text>
+<text x="806" y="26" class="rval soft">達成 8%</text>
+<text x="0" y="64" class="rlab">通投</text>
+<rect x="140" y="51" width="300" height="18" rx="2" class="track"/>
+<rect x="140" y="51" width="267" height="18" rx="2" class="bar"/>
+<text x="454" y="64" class="rval">CHF 986</text>
+<text x="552" y="64" class="rval soft">27% of spend</text>
+<circle cx="690" cy="59" r="4.5" class="lt-watch"/>
+<text x="704" y="64" class="rval">ROAS 0.70</text>
+<text x="806" y="64" class="rval soft">達成 70%</text>
+<text x="0" y="102" class="rlab">美妆兴趣人群</text>
+<rect x="140" y="89" width="300" height="18" rx="2" class="track"/>
+<rect x="140" y="89" width="267" height="18" rx="2" class="bar"/>
+<text x="454" y="102" class="rval">CHF 985</text>
+<text x="552" y="102" class="rval soft">27% of spend</text>
+<circle cx="690" cy="97" r="4.5" class="lt-bad"/>
+<text x="704" y="102" class="rval">ROAS 0.07</text>
+<text x="806" y="102" class="rval soft">達成 7%</text>
+<text x="0" y="140" class="rlab">竞品搜索人群</text>
+<rect x="140" y="127" width="300" height="18" rx="2" class="track"/>
+<rect x="140" y="127" width="156" height="18" rx="2" class="bar"/>
+<text x="454" y="140" class="rval">CHF 575</text>
+<text x="552" y="140" class="rval soft">16% of spend</text>
+<circle cx="690" cy="135" r="4.5" class="lt-bad"/>
+<text x="704" y="140" class="rval">ROAS 0.16</text>
+<text x="806" y="140" class="rval soft">達成 16%</text>
+</svg>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>轉化漏斗 點擊 → 落地頁 → 加購 → 下單 → 付款</h3>
+        <span class="src">線性刻度</span></div>
+      <p class="cap">加購 → 下單是唯一的瓶頸，冷啟動期
+        1.8%，且<strong>正在惡化</strong>：
+        前三日 2.9%／5.5%／3.6%，
+        近三日 1.9%／0.9%／1.4%。
+        加購量同期從 69 到 290，
+        下單數沒有跟上 —— 流量與興趣都在，卡點在下單這一步。
+        下單 → 付款 95%，
+        唯一未付款的一筆發生在 9/09，早於 9/11 的異常紀錄 2 天，兩者無關。提升 ROAS 的槓桿在加購轉下單，不在流量成本。
+        <span class="cav">註：點擊 → 落地頁
+        78.2% <strong>不能照字面讀</strong> ——
+        逐列有 63/104
+        筆的訪問次數超過點擊次數，09/14 整日已達
+        120%，兩者的歸因視窗顯然不同（見
+        04 / Data QA 第 01 點）。實際到達率高於本圖所示，真正可用的兩段是加購 → 下單
+        與下單 → 付款。</span></p>
+      <svg viewBox="0 0 860 224" class="chart" role="img" aria-label="Conversion funnel">
+<text x="0" y="27" class="rlab">點擊 Clicks</text>
+<rect x="190" y="12" width="380" height="20" rx="2" class="track"/>
+<rect x="190" y="12" width="380" height="20" rx="2" class="bar"/>
+<text x="584" y="27" class="rval big">14,941</text>
+<text x="0" y="71" class="rlab">落地頁訪問 LP visits</text>
+<rect x="190" y="56" width="380" height="20" rx="2" class="track"/>
+<rect x="190" y="56" width="297" height="20" rx="2" class="bar"/>
+<text x="584" y="71" class="rval big">11,687</text>
+<text x="678" y="71" class="rval soft">← 78.2%</text>
+<text x="0" y="115" class="rlab">加入購物車 Add to cart</text>
+<rect x="190" y="100" width="380" height="20" rx="2" class="track"/>
+<rect x="190" y="100" width="31" height="20" rx="2" class="bar"/>
+<text x="584" y="115" class="rval big">1,233</text>
+<text x="678" y="115" class="rval soft">← 10.6%</text>
+<text x="0" y="159" class="rlab">下單 Orders</text>
+<rect x="190" y="144" width="380" height="20" rx="2" class="track"/>
+<rect x="190" y="144" width="3" height="20" rx="2" class="bar leak"/>
+<text x="584" y="159" class="rval big">22</text>
+<text x="678" y="159" class="rval warn">← 1.8%</text>
+<text x="0" y="203" class="rlab">付款 Paid</text>
+<rect x="190" y="188" width="380" height="20" rx="2" class="track"/>
+<rect x="190" y="188" width="3" height="20" rx="2" class="bar"/>
+<text x="584" y="203" class="rval big">21</text>
+<text x="678" y="203" class="rval soft">← 95.5%</text>
+</svg>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>人群明細</h3>
+        <span class="src">按成本排序 · 全部 5 個人群</span></div>
+      <p class="cap">上圖排序，此表對帳。CPA 是人群之間真正分開的地方：
+        通投每筆付款 CHF 66，女性人群
+        CHF 554 —— 相差 8 倍。
+        </p>
+      <table class="grid-t t-aud"><thead><tr>
+ <th class="c-name" scope="col">人群<span class="en"> Audience</span></th>
+ <th scope="col">成本 CHF</th>
+ <th scope="col">佔比</th><th scope="col">CTR</th><th scope="col">付款</th>
+ <th scope="col">CPA CHF</th>
+ <th class="c-roas" scope="col">ROAS<span class="en"> vs KPI 1.0</span></th>
+ </tr></thead><tbody><tr><td class="c-name">女性人群</td><td>1,107.55</td><td class="soft">30.3%</td><td>0.23%</td><td>2</td><td>554</td><td class="c-roas"><span class="verdict bad"><i></i>0.08</span></td></tr><tr><td class="c-name">通投</td><td>986.26</td><td class="soft">27.0%</td><td>1.06%</td><td>15</td><td>66</td><td class="c-roas"><span class="verdict watch"><i></i>0.70</span></td></tr><tr><td class="c-name">美妆兴趣人群</td><td>985.46</td><td class="soft">27.0%</td><td>0.20%</td><td>2</td><td>493</td><td class="c-roas"><span class="verdict bad"><i></i>0.07</span></td></tr><tr><td class="c-name">竞品搜索人群</td><td>574.72</td><td class="soft">15.7%</td><td>0.49%</td><td>2</td><td>287</td><td class="c-roas"><span class="verdict bad"><i></i>0.16</span></td></tr><tr class=neg><td class="c-name">核心搜索人群</td><td>0.04</td><td class="soft">0.0%</td><td>—</td><td>0</td><td>—</td><td class="c-roas"><span class="verdict off">—</span></td></tr><tr class="t-tot"><td class="c-name">全部 Total</td><td>3,654.03</td><td class="soft">100.0%</td><td>0.33%</td><td>21</td><td>174</td><td class="c-roas"><span class="verdict bad"><i></i>0.26</span></td></tr></tbody></table>
+    </div>
+  </section>
+
+  <section aria-labelledby="s3">
+    <div class="sec-h"><span class="k">03 / Logbook</span>
+      <h2 id="s3">投放日志</h2>
+      <span class="note">优化动作、异常与决策记录</span></div>
+    <div class="logbook"><div class="lg-day">
+<div class="lg-date">10 Sep 2026</div>
+<div class="lg-items">
+<article class="lg-card opt">
+<div class="lg-head"><span class="lg-kind opt">优化</span><span class="lg-tag">出价策略调整</span></div>
+<p class="lg-body">前两日整体 roi 偏低，切下单出价。</p>
+<dl class="lg-m">
+<div><dt>切换前 ROAS (9/8–9/9)</dt><dd>0.07</dd></div>
+<div><dt>新建计划</dt><dd>通投 × 下单出价</dd></div>
+</dl>
+</article>
+</div></div>
+<div class="lg-day">
+<div class="lg-date">11 Sep 2026</div>
+<div class="lg-items">
+<article class="lg-card opt">
+<div class="lg-head"><span class="lg-kind opt">优化</span><span class="lg-tag">加价提消耗</span></div>
+<p class="lg-body">昨日 roi 有稍微提升，但是消耗较低，主要是切了出价后，消耗较慢，今日会重新针对下单出价再新建计划，增加出价，提升消耗哈。</p>
+<dl class="lg-m">
+<div><dt>9/10 ROAS</dt><dd>0.34</dd></div>
+<div><dt>9/10 消耗</dt><dd>CHF 558.46 (-55%)</dd></div>
+</dl>
+</article>
+<article class="lg-card pause">
+<div class="lg-head"><span class="lg-kind pause">暂停</span><span class="lg-tag">落地页故障 · 已暂停</span></div>
+<p class="lg-body">对落地页检测了下，现在无法对产品进行下单/加购（广告可以正常点击进入，点击下方立即购买／加入购物车均无反应），暂停了 campaign。</p>
+<dl class="lg-m">
+<div><dt>加购 → 下单转化</dt><dd>3.8% (234 → 9)</dd></div>
+<div><dt>Campaign 状态</dt><dd>已暂停</dd></div>
+</dl>
+</article>
+<article class="lg-card ok">
+<div class="lg-head"><span class="lg-kind ok">恢复</span><span class="lg-tag">落地页已修复 · 恢复投放</span></div>
+<p class="lg-body">现在正常了，恢复投放了</p>
+<dl class="lg-m">
+<div><dt>暂停 → 恢复</dt><dd>同日</dd></div>
+<div><dt>9/11 ROAS</dt><dd>0.64</dd></div>
+<div><dt>9/11 消耗</dt><dd>CHF 197.23</dd></div>
+</dl>
+</article>
+</div></div>
+<div class="lg-day">
+<div class="lg-date">14 Sep 2026</div>
+<div class="lg-items">
+<article class="lg-card opt">
+<div class="lg-head"><span class="lg-kind opt">优化</span><span class="lg-tag">加价提消耗</span></div>
+<p class="lg-body">切了下单出价后，目前消耗较低，已经在新增计划提升出价。今天会再提升20%看下</p>
+<dl class="lg-m">
+<div><dt>9/13 ROAS</dt><dd>1.07 · 首次达标</dd></div>
+<div><dt>9/13 消耗</dt><dd>CHF 107.90</dd></div>
+<div><dt>下单出价累计 ROAS</dt><dd>0.74</dd></div>
+</dl>
+</article>
+</div></div>
+<div class="lg-day">
+<div class="lg-date">15 Sep 2026</div>
+<div class="lg-items">
+<article class="lg-card opt">
+<div class="lg-head"><span class="lg-kind opt">优化</span><span class="lg-tag">新增最大转化量计划</span></div>
+<p class="lg-body">昨日我们新增了以最大转化量投放方式计划，会投放观察一周左右。</p>
+<dl class="lg-m">
+<div><dt>新增投放方式</dt><dd>最大转化量</dd></div>
+<div><dt>观察期</dt><dd>约 1 周</dd></div>
+</dl>
+</article>
+</div></div></div>
+  </section>
+
+  
+  <section aria-labelledby="s4">
+    <div class="sec-h"><span class="k">04 / Data QA</span>
+      <h2 id="s4">供應商報表對帳</h2>
+      <span class="note">內部用 · 不進客戶版</span></div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>6 處對不上</h3>
+        <span class="src">每次 build 自動重跑</span></div>
+      <p class="cap">上方所有數字都取自供應商日報。本段反過來檢查那份日報自己有沒有對不上的地方，
+        因為供應商記錯的數字，經我們的手交出去就變成我們的數字。
+        成本、付款金額、ROAS 與各項每列衍生欄位（CTR／CPC／CPM／下單 ROI／付費 ROI）
+        全部重算相符，匯總頁的比率也是重算而非把每列比率相加 —— 這幾項是乾淨的，
+        所以本報告的 KPI 與 ROAS 判讀不受影響。
+        以下是對不上的部分，依嚴重度排序。
+        <span class="cav">註：1 項標 BLOCK 的
+        代表該數字不能照字面讀；標 WATCH 與 NOTE 的不改變今天的決策，
+        列出以免日後有人重新推導一次。</span></p>
+      <div class="vr-sum">
+        <span>BLOCK <b>1</b></span>
+        <span>WATCH <b>2</b></span>
+        <span>NOTE <b>3</b></span>
+        <span>檢查範圍 <b>104</b> 筆素材日資料 · <b>7</b> 天 ·
+          <b>10</b> 個原始欄位</span>
+      </div>
+      <div class="vr"><div class="vr-i">
+      <span class="vr-n">01</span>
+      <span class="vr-s block">block</span>
+      <h4>落地頁訪問次數超過點擊次數</h4>
+      <p>訪問需先發生點擊，比率不該超過 100%。63/104 筆素材日資料違反（佔 61%）；9/13、9/14 連整日合計都超過 100%，不是單列雜訊。比率區間 62%–156%，各出價方式的水準並不相同（cpc出价 67%、下单出价 100%）。最可能是點擊與訪問的歸因視窗不同（訪問回溯計入更早的點擊），若是如此，落地頁到達率與加購率的分母都被低估。</p>
+      <p class="vr-ev">每日訪問／點擊：9/08 62% · 9/09 62% · 9/10 74% · 9/11 94% · 9/12 100% · 9/13 156% · 9/14 120%</p>
+    </div>
+<div class="vr-i">
+      <span class="vr-n">02</span>
+      <span class="vr-s watch">watch</span>
+      <h4>訪問人數／訪問次數 由 100% 掉到 58%，去重規則疑似中途改變</h4>
+      <p>09/08 全部 11/11 筆的人數與次數完全相等 —— 真實的去重不會這樣。到 09/14 掉到 67%。前期看來未去重，後期才去重，所以「訪問人數」這條序列前後不可比，不能用來看趨勢。</p>
+      <p class="vr-ev">09/08 100% · 09/09 97% · 09/10 94% · 09/11 87% · 09/12 78% · 09/13 58% · 09/14 67%</p>
+    </div>
+<div class="vr-i">
+      <span class="vr-n">03</span>
+      <span class="vr-s watch">watch</span>
+      <h4>21 筆資料有曝光、成本為 0</h4>
+      <p>共 1,341 次曝光、39 次加購掛在成本為 0 的資料列上（不到 0.1% 的曝光）。ROAS 不受影響（成本確為 0），CPM 與加購率的分母會被略微墊高。多為極小額計劃的進位結果，仍需供應商確認是四捨五入還是漏記成本。</p>
+      <p class="vr-ev">零成本曝光 1,341 · 加購 39 · 付款 0 筆</p>
+    </div>
+<div class="vr-i">
+      <span class="vr-n">04</span>
+      <span class="vr-s note">note</span>
+      <h4>72 次加購掛在點擊為 0 的資料列上</h4>
+      <p>佔全部 1,233 次加購的 5.8%。與第 1 點同源：加購被歸因回它自己的資料列，點擊卻記在別的資料列。影響很小，逐素材看加購率時要知道分母不完全對應。</p>
+      <p class="vr-ev">20 筆資料列</p>
+    </div>
+<div class="vr-i">
+      <span class="vr-n">05</span>
+      <span class="vr-s note">note</span>
+      <h4>下單 22 筆對付款 21 筆，差 1 筆（報表正確）</h4>
+      <p>差額 RMB 260，來自09/09 竞品搜索人群 的一筆未付款訂單。這是真實的下單未付款，不是報表錯誤。發生日與異常紀錄（9/11）不同日，兩者無關。</p>
+      <p class="vr-ev">下單 RMB 7,836 vs 付款 RMB 7,576</p>
+    </div>
+<div class="vr-i">
+      <span class="vr-n">06</span>
+      <span class="vr-s note">note</span>
+      <h4>人群與出價方式完全重疊，效果無法分離</h4>
+      <p>5 個人群 × 2 種出價方式只出現 5 種組合（滿格為 10）：通投只跑 下单出价，其餘人群只跑 cpc出价。所以「通投比較好」與「下单出价比較好」在本案是同一件事的兩種說法，非兩項獨立證據。素材類型與文案同樣鎖成 3 組一對一，素材效果與文案效果也分不開。要分離必須在正式期做交叉測試。</p>
+      <p class="vr-ev">女性人群×cpc出价 · 核心搜索人群×cpc出价 · 竞品搜索人群×cpc出价 · 美妆兴趣人群×cpc出价 · 通投×下单出价</p>
+    </div></div>
+    </div>
+  </section>
+
+  <div class="notes">
+    <div>
+      <h4>Formula</h4>
+      <ul>
+        <li>CHF = RMB × 1.2116 ÷ 9.71</li>
+        <li>Single Brand ROAS = 付款金額 ÷ 成本</li>
+        <li>待攤回赤字 = KPI × 期間成本 － 期間付款額</li>
+        <li>正式期所需花費 X = 赤字 ÷（正式期 ROAS － 1）</li>
+        <li>CTR = 点击次数 ÷ 曝光次数</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Source</h4>
+      <ul>
+        <li>香缇卡数据日报 · <code>数据源</code> sheet</li>
+        <li>104 creative-day rows · 7 days</li>
+        <li>對帳 2026/09/14：付款 4 筆 ·
+          CHF 160.34 · CTR 1.19% · ROAS 0.61</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Reading the verdict</h4>
+      <ul>
+        <li>圓點／柱色：藍＝達 KPI · 灰＝達 KPI 半程 · 紅＝未達半程</li>
+        <li><strong>0.26 為冷啟動期學習成本，非合約結算數</strong></li>
+        <li>合約結算以全期（09/08–09/24）為準，
+          待正式期 10 天資料回來後成立</li>
+        <li>9/13 為首個達 KPI 1.0 的單日</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Produced by MIA · Campaign Intelligence</span>
+    <span>Chantecaille × 日上 · WeChat Moments RTB</span>
+  </div>
+
+</main>
+<script>
+/* Opens the print dialog when the document is reached at …Client.html#print, and does
+   nothing otherwise. This is what the hub's 列印 button targets.
+
+   It lives here rather than in the hub because the hub shows these editions in frames,
+   and a file:// frame is a separate origin — the hub cannot call print() into it, and
+   neither can it script a window it opened. A hash the document handles itself needs no
+   cross-origin access at all, and keeps working when the file is opened from a mail
+   attachment with no hub anywhere near it.
+
+   Guarded on the hash, so a client who opens the file normally sees no dialog.
+   Braces are doubled because this block is emitted from an f-string. */
+(function(){
+  if (location.hash === '#print') window.addEventListener('load', function(){ print(); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHC RTB Hub · 內部 · 香缇卡</title>
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<style>
+:root{
+  --paper:#F6F3ED; --sand:#FFFFFF; --ink:#0C102D; --ink-soft:#4C4D5F;
+  --pink:#F10D93; --pink-txt:#C20A76; --deep:#3256DE;
+  --line:rgba(12,16,45,.14); --tint:rgba(50,86,222,.05);
+  --sans:Geist,-apple-system,"PingFang TC","Noto Sans CJK TC","Microsoft JhengHei",
+    system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+/* The one place a viewport-height lock is right: the frame is chrome and the document
+   inside it does the scrolling, so the tab bar stays put while a 6-page dashboard moves
+   under it. */
+html,body{height:100%}
+body{margin:0;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:14px;line-height:1.5}
+a{color:var(--deep)}
+:focus-visible{outline:2px solid var(--deep);outline-offset:2px}
+
+.bar{display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+  padding:12px 20px;border-bottom:1px solid var(--ink);background:var(--sand)}
+.bar .id{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.04em}
+.bar .id em{font-style:normal;font-weight:400;color:var(--ink-soft);margin-left:10px}
+/* INTERNAL is the most load-bearing word on the page: it is what stops the hub being
+   forwarded. Pink, bordered, and in the first line of sight rather than in a footer. */
+.badge{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;
+  border:1px solid rgba(194,10,118,.42);background:rgba(194,10,118,.07);
+  color:var(--pink-txt);padding:4px 9px}
+.bar .built{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+
+/* ---- tabs ---- */
+.tabs{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--ink);
+  background:var(--sand);padding:0 20px}
+.tab{appearance:none;border:0;border-bottom:2px solid transparent;background:none;
+  font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--ink-soft);
+  padding:13px 18px;cursor:pointer;display:flex;align-items:center;gap:9px}
+.tab:hover{color:var(--ink)}
+/* Selection is carried by three things at once — the rule, the weight and the ink — because
+   which edition is on screen is the one thing a reader must never have to guess here. */
+.tab[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--pink);
+  background:var(--tint)}
+.tab .dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.tab .sub{font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
+.acts{margin-left:auto;display:flex;align-items:center;gap:10px;padding:8px 0}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--ink);
+  background:var(--ink);color:#fff;text-decoration:none;font-family:var(--mono);
+  font-size:11px;letter-spacing:.06em;padding:8px 13px;cursor:pointer}
+.btn:hover{background:#1b2050}
+.btn.ghost{background:none;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{background:var(--tint);border-color:var(--ink)}
+.btn[hidden]{display:none}
+
+/* ---- panes ---- */
+.panes{flex:1;min-height:0;position:relative}
+/* Both frames stay in the DOM and are toggled with [hidden]. Rebuilding a frame on every
+   tab switch would reload a 60KB document and throw away the reader's scroll position —
+   the point of a tab is that going back finds it where you left it. */
+.pane{position:absolute;inset:0;display:flex;flex-direction:column}
+.pane[hidden]{display:none}
+.note{display:flex;gap:12px;align-items:baseline;padding:9px 20px;
+  border-bottom:1px solid var(--line);background:var(--paper);
+  font-size:12px;color:var(--ink-soft)}
+.note b{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink);
+  flex:none}
+.pane iframe{flex:1;width:100%;border:0;background:var(--paper)}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <span class="id">CHC RTB CAMPAIGN HUB<em>香缇卡 朋友圈单品页投放 · 0908–0924</em></span>
+  <span class="badge">INTERNAL ONLY</span>
+  <span class="built">built 2026-09-15 16:24</span>
+</div>
+
+<div class="tabs" role="tablist" aria-label="Dashboard editions">
+  <button class="tab" role="tab" data-pane="internal" aria-selected="true"
+          aria-controls="p-internal" id="t-internal">
+    <i class="dot"></i>內部版<span class="sub">Internal</span></button>
+  <button class="tab" role="tab" data-pane="client" aria-selected="false"
+          aria-controls="p-client" id="t-client">
+    <i class="dot"></i>客戶版<span class="sub">Client</span></button>
+  <span class="acts">
+    <!-- download forces a save rather than an in-browser preview: the point of the button
+         is to get the file into an email, not to read it here. -->
+    <a class="btn" href="CHC-RTB-Campaign-Dashboard-Client.pdf" download>下載客戶版 PDF</a>
+    <!-- The dashboard itself handles #print on load, so this needs no cross-frame script:
+         a file:// iframe is a separate origin and the hub cannot call print() into it. -->
+    <a class="btn ghost" href="client.html#print" target="_blank"
+       rel="noopener">列印／另存 PDF</a>
+  </span>
+</div>
+
+<div class="panes">
+  <div class="pane" role="tabpanel" data-pane="internal" id="p-internal"
+       aria-labelledby="t-internal">
+    <p class="note"><b>內部</b><span>含學習結論、待攤回赤字、正式期達標條件與供應商報表對帳
+      —— 這一版不對外。</span></p>
+    <iframe src="internal.html" title="CHC RTB 內部版儀表板"></iframe>
+  </div>
+  <div class="pane" role="tabpanel" data-pane="client" id="p-client"
+       aria-labelledby="t-client" hidden>
+    <p class="note"><b>客戶版</b><span>數字與內部版完全一致，移除所有判讀、預算建議與對帳。
+      PDF 為 A4 210×297mm 直式 6 頁，已內嵌底色與判讀色。</span></p>
+    <iframe src="client.html" title="CHC RTB 客戶版儀表板"></iframe>
+  </div>
+</div>
+
+<script>
+(function(){
+  var tabs  = [].slice.call(document.querySelectorAll('.tab'));
+  var panes = [].slice.call(document.querySelectorAll('.pane'));
+  function show(name, push){
+    tabs.forEach(function(t){
+      t.setAttribute('aria-selected', String(t.dataset.pane === name));
+    });
+    panes.forEach(function(p){ p.hidden = (p.dataset.pane !== name); });
+    /* The hash is the whole persistence story: reload, bookmark and back-button all fall
+       out of it, and it costs no storage the reader has to clear. */
+    if (push && location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
+  }
+  tabs.forEach(function(t){
+    t.addEventListener('click', function(){ show(t.dataset.pane, true); });
+  });
+  /* Left/right arrows move between tabs once one has focus — the tab pattern's expected
+     keyboard behaviour, and cheap once the click handler exists. */
+  document.querySelector('.tabs').addEventListener('keydown', function(e){
+    var i = tabs.indexOf(document.activeElement);
+    if (i < 0) return;
+    var j = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : -1;
+    if (j < 0 || j >= tabs.length) return;
+    e.preventDefault(); tabs[j].focus(); show(tabs[j].dataset.pane, true);
+  });
+  var start = (location.hash || '').replace('#', '');
+  show(tabs.some(function(t){ return t.dataset.pane === start; }) ? start : 'internal', false);
+})();
+</script>
+</body>
+</html>
