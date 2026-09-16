@@ -158,7 +158,11 @@ section{margin-top:var(--s6)}
    one instrument. Without it each cell stacks independently, so a 2-line label in one and
    a 1-line label in another push their figures to different heights — six figures on five
    baselines, which is exactly what looked cluttered. */
-.m-grid{display:grid;grid-template-columns:1.6fr repeat(5,1fr);gap:1px;
+/* The track count follows the cell count rather than being fixed at six: the client
+   edition carries one fewer cell (no carried deficit), and a spare track would sit empty
+   showing the ink that draws the hairlines — a dark block on a page that must stay light.
+   `--m-rest` is set on the element by the build, so one stylesheet serves both editions. */
+.m-grid{display:grid;grid-template-columns:1.6fr repeat(var(--m-rest,5),1fr);gap:1px;
   border:1px solid var(--ink);border-radius:var(--r-m);background:var(--ink);overflow:hidden}
 /* label / figure / footnote. The label row is auto (its height is set by the tallest label
    in the row and then shared), the figure row is auto, and the footnote row takes the slack
@@ -426,6 +430,10 @@ table.grid-t tr.neg td{color:var(--ink-soft)}
   .hero{grid-template-columns:1fr}
   .hero-r{border-left:0;border-top:1px solid var(--line)}
   .m-grid{grid-template-columns:1fr 1fr 1fr}
+  /* Three tracks divide the internal edition's six cells exactly; the client edition's
+     five leave the last row one short, and an empty grid area shows the ink that draws the
+     hairlines — a dark block. The trailing cell takes the spare track. */
+  .m-grid[style*="--m-rest:4"] .m-cell:last-child{grid-column:span 2}
   .gauge-panel{grid-template-columns:1fr;gap:var(--s3)}
   .mx-grid{grid-template-columns:1fr}
   .notes{grid-template-columns:1fr 1fr}
@@ -434,10 +442,17 @@ table.grid-t tr.neg td{color:var(--ink-soft)}
   .m-grid{grid-template-columns:1fr 1fr}
   .m-cell.focal{grid-column:1 / -1}
   .m-cell.focal .m-v{font-size:44px}
-  /* Six cells over two columns leaves the last row half empty, and an empty grid area
-     shows the ink that draws the hairlines — a dark block on a page that has to stay
-     light. The trailing cell spans the row instead. */
-  .m-cell:last-child{grid-column:1 / -1}
+  /* An odd cell count over two columns leaves the last row half empty, and an empty grid
+     area shows the ink that draws the hairlines — a dark block on a page that has to stay
+     light. The trailing cell spans the row instead.
+     Which count is odd depends on the edition: the focal cell already spans both columns
+     above, so the internal edition's remaining five make the last row short, and the
+     client edition's four fill it exactly. `--m-rest` carries that parity. */
+  .m-grid[style*="--m-rest:5"] .m-cell:last-child{grid-column:1 / -1}
+  /* And the client edition's spare-track fix from the 3-column breakpoint has to be undone
+     here: it is still in force at this width, and over two columns a spanning last cell is
+     what CREATES the hole rather than filling one. */
+  .m-grid[style*="--m-rest:4"] .m-cell:last-child{grid-column:auto}
   .mx-cells{grid-template-columns:repeat(2,minmax(0,1fr))}
   .only-wide{display:none} .only-narrow{display:block}
   .lg-day{grid-template-columns:1fr;gap:var(--s2)}
@@ -587,6 +602,9 @@ table.grid-t tr.neg td{color:var(--ink-soft)}
   .hero{grid-template-columns:1fr}
   .hero-r{border-left:0;border-top:1px solid var(--line)}
   .m-grid{grid-template-columns:1fr 1fr 1fr}
+  /* Same spare-track problem as the ≤1000px breakpoint, and it matters more here: an empty
+     track prints as a solid dark block on a sheet the client keeps. */
+  .m-grid[style*="--m-rest:4"] .m-cell:last-child{grid-column:span 2}
   /* 52px is sized for a 1.6fr track. In a third of 696px the figure plus its
      `/ KPI 1.0` qualifier is a nowrap flex line that would overrun the cell, and the
      overrun is invisible — `.m-f` has no scrollbar to give it away. */
@@ -682,7 +700,7 @@ table.grid-t tr.neg td{color:var(--ink-soft)}
       <h2 id="s1">對標結果</h2>
       <span class="note">Single Brand ROAS = 付款金額 ÷ 成本 · 冷啟動期＋正式期 D1–D8</span></div>
 
-    <div class="m-grid"><div class="m-cell focal">
+    <div class="m-grid" style="--m-rest:5"><div class="m-cell focal">
   <span class="m-l">全期累計 ROAS<span class="en">Cumulative ROAS</span></span>
   <span class="m-f"><strong class="m-v bad">0.32</strong><span class="m-u">/ KPI 1.0</span></span>
   <span class="m-s">含正式期 1 天．D1–D8 / 17 天</span>
